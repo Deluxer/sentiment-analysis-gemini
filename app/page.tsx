@@ -1,103 +1,207 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
 
-export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+// Interfaces para la estructura de la respuesta de la API
+interface EmotionAnalysis {
+  emotion: string;
+  evidence: string;
+}
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+interface KeyInteraction {
+  question: string;
+  response: string;
+}
+
+interface AnalysisResult {
+  transcription: string;
+  sentimentAnalysis: {
+    overallSentiment: string;
+    specificEmotions: EmotionAnalysis[];
+  };
+  reasonForCall: string;
+  keyInteractions: KeyInteraction[];
+}
+
+// Componente de carga (Loader)
+const Loader = () => (
+  <div className="flex justify-center items-center p-8">
+    <svg className="animate-spin h-10 w-10 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+  </div>
+);
+
+// Componente para visualizar la transcripción con estilos
+const TranscriptionViewer = ({ transcription }: { transcription: string }) => {
+  const lines = transcription.split('\n').filter(line => line.trim() !== '');
+
+  return (
+    <div className="space-y-3 font-mono text-sm">
+      {lines.map((line, index) => {
+        const parts = line.split(/:(.*)/s);
+        const speaker = parts[0];
+        const message = parts[1] || "";
+        
+        // **Cambio Clave**: Detecta roles en español
+        const isAgent = speaker.toLowerCase().includes('agente');
+
+        return (
+          <div key={index}>
+            <strong className={isAgent ? 'text-cyan-400' : 'text-blue-400'}>
+              {speaker}:
+            </strong>
+            <span className="text-gray-300 ml-2">
+              {message.trim()}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+
+export default function Home() {
+  const [file, setFile] = useState<File | null>(null);
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string>("");
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
+    if (selectedFile) {
+        setFile(selectedFile);
+        setFileName(selectedFile.name);
+        setAnalysis(null);
+        setError(null);
+    }
+  };
+
+  const handleAnalyzeClick = async () => {
+    if (!file) {
+      setError("Por favor, selecciona un archivo MP3 para analizar.");
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    setAnalysis(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        body: formData,
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Error al analizar el archivo de audio.");
+      }
+      setAnalysis(result);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-[#0d1117] text-white font-sans min-h-screen">
+      <div className="container mx-auto p-4 sm:p-8">
+        <header className="flex flex-col items-center gap-4 text-center mb-10">
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-100">
+              Panel de Análisis de Llamadas
+            </h1>
+            <p className="text-lg text-gray-400">
+              Sube un archivo MP3 para obtener un desglose completo con el poder de Google Gemini.
+            </p>
+        </header>
+
+        <main className="flex flex-col gap-8 items-center w-full">
+            {/* --- SECCIÓN DE CARGA DE ARCHIVO --- */}
+            <div className="w-full max-w-2xl mx-auto bg-[#161b22] border border-gray-700 p-6 rounded-xl shadow-lg">
+                <div className="flex flex-col sm:flex-row gap-4 w-full items-center">
+                    <label htmlFor="mp3-upload" className="w-full sm:w-auto flex-shrink-0 cursor-pointer text-center rounded-full bg-purple-600 text-white font-semibold py-2.5 px-6 hover:bg-purple-700 transition-all duration-300 ease-in-out">
+                        Seleccionar Archivo
+                    </label>
+                    <input id="mp3-upload" type="file" accept="audio/mpeg" onChange={handleFileChange} className="hidden" />
+                    {fileName && <span className="text-gray-400 truncate flex-grow">{fileName}</span>}
+                    <button
+                        onClick={handleAnalyzeClick}
+                        disabled={!file || isLoading}
+                        className="w-full sm:w-auto ml-auto flex-shrink-0 rounded-full bg-blue-600 text-white font-bold py-2.5 px-8 hover:bg-blue-700 disabled:bg-gray-500 disabled:cursor-not-allowed transition-all duration-300 ease-in-out"
+                    >
+                        Analizar Llamada
+                    </button>
+                </div>
+            </div>
+
+            {error && <p className="text-red-400 bg-red-900/50 p-4 rounded-lg w-full max-w-6xl mx-auto text-center">{error}</p>}
+            {isLoading && <Loader />}
+            
+            {/* --- PANEL DE RESULTADOS --- */}
+            {analysis && (
+            <div className="mt-4 w-full max-w-6xl mx-auto space-y-6">
+                <div className="p-6 border border-gray-700 rounded-xl bg-[#161b22] shadow-lg">
+                    <h2 className="text-xl font-semibold mb-2 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>Resumen de la Llamada</h2>
+                    <p className="text-gray-300">{analysis.reasonForCall}</p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                    {/* Columna Izquierda */}
+                    <div className="lg:col-span-2 space-y-6">
+                        <div className="p-6 border border-gray-700 rounded-xl bg-[#161b22] shadow-lg">
+                            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>Interacciones Clave</h2>
+                            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
+                                {analysis.keyInteractions.map((item, index) => (
+                                <div key={index}>
+                                    <p className="font-semibold text-gray-200">P: {item.question}</p>
+                                    <p className="text-gray-400 pl-4 border-l-2 border-blue-500 ml-2">R: {item.response}</p>
+                                </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="p-6 border border-gray-700 rounded-xl bg-[#161b22] shadow-lg">
+                            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>Análisis de Sentimiento</h2>
+                            <div className="space-y-4">
+                                <div>
+                                    <h3 className="text-lg font-medium">Sentimiento General</h3>
+                                    <p className="text-gray-200 capitalize p-2 bg-blue-900/50 rounded-md inline-block mt-1">{analysis.sentimentAnalysis.overallSentiment}</p>
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-medium">Emociones Detectadas</h3>
+                                    <ul className="space-y-2 mt-2">
+                                        {analysis.sentimentAnalysis.specificEmotions.map((emo, index) => (
+                                        <li key={index} className="p-2 bg-gray-900/70 rounded-md">
+                                            <strong className="capitalize text-gray-200">{emo.emotion}:</strong>
+                                            <span className="text-gray-400"> {emo.evidence}</span>
+                                        </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {/* Columna Derecha */}
+                    <div className="lg:col-span-3">
+                        <div className="p-6 border border-gray-700 rounded-xl bg-[#161b22] shadow-lg h-full">
+                            <h2 className="text-xl font-semibold mb-3 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18M9 6h6M9 18h6" /></svg>Transcripción Completa</h2>
+                            <div className="max-h-[600px] overflow-y-auto p-4 bg-[#0d1117] rounded-md scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+                                <TranscriptionViewer transcription={analysis.transcription} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            )}
+        </main>
+      </div>
     </div>
   );
 }
